@@ -1,0 +1,31 @@
+---
+title: CMN — Logout Flow
+---
+sequenceDiagram
+    actor U as User
+    participant FE as Frontend<br/>(@core/http)
+    participant GW as Web Gateway
+    participant AC as AuthController<br/>(POST /api/auth/logout)
+    participant AS as AuthAppService<br/>.LogoutAsync
+    participant JWT as JWT Claims
+    participant R as Redis
+
+    U->>FE: Click logout
+    FE->>FE: Read accessToken from cookie ACCESS_TOKEN_KEY
+    FE->>GW: POST /cmn/administration-service/api/auth/logout<br/>Header: Authorization: Bearer {accessToken}<br/>Header: X-Tenant: {tenantId}<br/>[Authorize — JWT required]
+    GW->>AC: Forward
+    AC->>AS: LogoutAsync()
+
+    AS->>JWT: Extract claims from current request JWT
+    JWT-->>AS: userId, sessionId
+
+    AS->>R: DEL {userId}:{sessionId}
+    R-->>AS: OK (key removed)
+
+    AS-->>AC: void
+    AC-->>GW: 200 ApiResult
+    GW-->>FE: 200
+
+    FE->>FE: cookie.remove(ACCESS_TOKEN_KEY)
+    FE->>FE: cookie.remove(REFRESH_TOKEN_KEY)
+    FE-->>U: Redirect to /signin

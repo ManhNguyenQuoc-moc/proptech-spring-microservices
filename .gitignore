@@ -22,6 +22,7 @@ yarn-error.log*
 # Build
 dist/
 build/
+target/
 
 # Cache
 .cache/

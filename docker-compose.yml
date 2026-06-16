@@ -1,0 +1,150 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: proptech-postgres
+    environment:
+      POSTGRES_DB: listing_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d listing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/infrastructure/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - microservice-net
+
+  user-service:
+    build:
+      context: ./server/services/user-service
+      dockerfile: ../../infrastructure/docker/Dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SCHEMA: user_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservice-net
+
+  product-service:
+    build:
+      context: ./server/services/product-service
+      dockerfile: ../../infrastructure/docker/Dockerfile
+    container_name: product-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SCHEMA: product_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservice-net
+
+  order-service:
+    build:
+      context: ./server/services/order-service
+      dockerfile: ../../infrastructure/docker/Dockerfile
+    container_name: order-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SCHEMA: order_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservice-net
+
+  payment-service:
+    build:
+      context: ./server/services/payment-service
+      dockerfile: ../../infrastructure/docker/Dockerfile
+    container_name: payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SCHEMA: payment_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservice-net
+
+  listing-service:
+    build:
+      context: ./server/services/listing-service
+      dockerfile: Dockerfile
+    container_name: listing-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SCHEMA: listing_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservice-net
+
+  gateway-service:
+    build:
+      context: ./server/services/gateway-service
+      dockerfile: ../../infrastructure/docker/Dockerfile
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_USER_SERVICE_URI: http://user-service:8081
+      GATEWAY_PRODUCT_SERVICE_URI: http://product-service:8082
+      GATEWAY_LISTING_SERVICE_URI: http://listing-service:8083
+      GATEWAY_ORDER_SERVICE_URI: http://order-service:8084
+      GATEWAY_PAYMENT_SERVICE_URI: http://payment-service:8085
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      listing-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    networks:
+      - microservice-net
+
+networks:
+  microservice-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "proptech://manifest.schema.json",
+  "title": "PropTech Spring Microservices Manifest",
+  "description": "JSON Schema for knowledge-base-main/_meta/manifest.yml",
+  "type": "object",
+  "required": ["version", "system", "services", "integrations", "bounded_contexts"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "schema": {
+      "type": "string"
+    },
+    "updated": {
+      "type": "string"
+    },
+    "system": {
+      "type": "object",
+      "required": ["id", "name", "description", "knowledge_base"],
+      "additionalProperties": true
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type", "stack", "path", "status"],
+        "additionalProperties": true
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "additionalProperties": true
+      }
+    },
+    "bounded_contexts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "service", "status"],
+        "additionalProperties": true
+      }
+    },
+    "technical_debt": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "ai_agent_guidance": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

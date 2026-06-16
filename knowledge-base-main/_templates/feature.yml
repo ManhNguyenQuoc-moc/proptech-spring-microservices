@@ -1,0 +1,63 @@
+# ============================================================
+# CMN FEATURE TEMPLATE
+# Use to add a new feature entry to _meta/manifest.yml
+#
+# Instructions:
+#   1. Copy this block into manifest.yml → features array
+#   2. Replace all <<PLACEHOLDERS>>
+#   3. Remove comment lines before committing
+#   4. Cross-link to bounded_contexts[].features array
+# ============================================================
+
+# <!-- BEGIN: feature-entry -->
+- id: <<context>>.<<feature-name>>          # Format: {context}.{name}. e.g. employee.export
+  name: "<<Feature Display Name>>"          # e.g. "Employee CSV Export"
+  bounded_context: <<bounded-context-id>>   # Must match bounded_contexts[].id
+  service: <<service-id>>                   # Must match services[].id
+
+  # HTTP endpoints (remove section entirely for event-only or background features)
+  endpoints:
+    - method: <<GET|POST|PUT|PATCH|DELETE>>
+      path: "/cmn/<<service-prefix>>/api/<<resource>>"  # e.g. "/cmn/administration-service/api/employee/export"
+      controller: "<<ControllerClass.MethodAsync>>"     # e.g. "EmployeeController.ExportAsync"
+      auth: <<anonymous|bearer|api-key>>
+      security_note: "<<optional — document [AllowAnonymous] if present>>"
+
+  # Application service method(s) — no AutoMapper, no DbContext
+  app_service: "<<AppServiceClass.MethodAsync>>"
+
+  # gRPC handler (remove if not a gRPC feature)
+  grpc_handler: "<<GrpcHandlerClass.MethodAsync>>"
+
+  # Event(s) published (remove if none)
+  events_published:
+    - <<EventClassName>>
+
+  # Linked requirements (must be registered in requirements.domains ID registry)
+  requirements:
+    - <<REQ-DOMAIN-NNN>>
+
+  # Linked business rules
+  business_rules:
+    - <<BR-DOMAIN-NNN>>
+
+  # Mermaid diagram path (relative to KB root)
+  diagram: "swt-cmn-knowledge-base/diagrams/<<diagram-name>>.mermaid"
+
+  status: <<implemented|partial|disabled|planned|stub>>
+
+  # List specific sub-features that are commented out
+  disabled:
+    - "<<What is disabled, why, and which TD-NNN tracks it>>"
+
+  notes: "<<Any implementation notes AI agents must know>>"
+# <!-- END: feature-entry -->
+
+# ============================================================
+# AFTER ADDING — also update:
+#   1. bounded_contexts[id].features: add this feature id
+#   2. 09-requirements/features/<<domain>>.md: add REQ entry
+#   3. 09-requirements/traceability-matrix.md: add row + ID registry
+#   4. Relevant diagram in diagrams/
+#   5. CHANGELOG.md
+# ============================================================

@@ -1,0 +1,77 @@
+---
+title: CMN Domain Entity Relationships
+---
+erDiagram
+    %% Administration Bounded Context
+    Employee {
+        Guid Id PK
+        string Name
+        string Code
+        string Email
+        string OtherEmail
+        Guid OrganizationUnitId FK
+        Guid PositionId FK
+        Guid AvatarFileId FK
+        string PhoneNumber
+        datetime JoinedDate
+        datetime DateOfBirth
+        int NumberOfLogin
+        datetime LastLoginTime
+        datetime NextLoginTime
+        Guid TenantId
+        Guid UserId
+        bool IsFirstLogin
+    }
+
+    OrganizationUnit {
+        Guid Id PK
+        string DisplayName
+        string Code
+        string ParentCode
+        string CodePath
+        string NamePath
+        Guid TenantId
+    }
+
+    Positions {
+        Guid Id PK
+        string Name
+        Guid OrganizationUnitId FK
+        Guid TenantId
+    }
+
+    MediaFile {
+        Guid Id PK
+        string DisplayName
+        string ResourceType
+        string SecureUrl
+        string PublicId
+        string Type
+        string AssetId
+        string Format
+        long Size
+        Guid TenantId
+    }
+
+    MailTemplate {
+        Guid Id PK
+        string Name
+        string Code
+        string Description
+        string Subject
+        string Body
+        Guid TenantId
+    }
+
+    %% Customer Bounded Context
+    Party {
+        Guid Id PK
+        Guid TenantId
+    }
+
+    %% Relations
+    Employee }o--|| OrganizationUnit : "belongs to"
+    Employee }o--|| Positions : "holds"
+    Employee }o--o| MediaFile : "has avatar"
+    Positions }o--|| OrganizationUnit : "within"
+    OrganizationUnit }o--o| OrganizationUnit : "parent"

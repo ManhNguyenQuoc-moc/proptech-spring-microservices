@@ -1,0 +1,59 @@
+---
+title: CMN System Architecture
+---
+graph TB
+    subgraph Clients
+        AWEB["swt-cmn-administration-web-app<br/>(Vite + React 19)"]
+        MWEB["swt-cmn-web-app<br/>(Next.js 16)"]
+        MOB["swt-cmn-mobile-app<br/>(Flutter / itzone)"]
+    end
+
+    subgraph Gateway["Web Gateway (YARP — .NET 9)"]
+        GW["CMN.WebGateWay<br/>/cmn/swagger"]
+    end
+
+    subgraph Backend
+        ADMIN["swt-cmn-administration-api<br/>.NET 9 + ABP<br/>Port :8088<br/>Schema: ADM"]
+        CUST["swt-cmn-customer-api<br/>.NET 9 + ABP<br/>Port :44360<br/>Schema: CM"]
+    end
+
+    subgraph External
+        CLOUDINARY["Cloudinary<br/>(Media Storage)"]
+        FIREBASE["Firebase<br/>(Crashlytics / FCM / Perf)"]
+        GMAPS["Google Maps<br/>+ Geolocator"]
+        GSIGN["Google Sign-In"]
+    end
+
+    subgraph Data
+        SQLSERVER[("SQL Server :1433<br/>DB: SWTCMN<br/>ADM + CM schemas")]
+        REDIS[("Redis<br/>(refresh tokens, OTP sessions,<br/>import sessions, rate limiting)")]
+        MONGO[("MongoDB :27017<br/>DB: swt_cmn<br/>Collection: adm_MailTemplate")]
+    end
+
+    AWEB -->|"HTTP + Bearer + X-Tenant"| GW
+    MWEB -->|"HTTP + Bearer + X-Tenant"| GW
+    MOB -->|"HTTP + Bearer + X-Tenant"| GW
+
+    GW -->|"/cmn/administration-service/**"| ADMIN
+    GW -->|"/cmn/customer-management/**"| CUST
+
+    CUST -->|"gRPC :50051 TLS (Permission + MailTemplate)"| ADMIN
+
+    ADMIN --> SQLSERVER
+    ADMIN --> REDIS
+    ADMIN --> CLOUDINARY
+    ADMIN --> MONGO
+
+    CUST --> SQLSERVER
+    CUST --> REDIS
+
+    MOB --> FIREBASE
+    MOB --> GMAPS
+    MOB --> GSIGN
+
+    style ADMIN fill:#4a90d9,color:#fff
+    style CUST fill:#50b86c,color:#fff
+    style GW fill:#f5a623,color:#fff
+    style AWEB fill:#9b59b6,color:#fff
+    style MWEB fill:#9b59b6,color:#fff
+    style MOB fill:#e74c3c,color:#fff

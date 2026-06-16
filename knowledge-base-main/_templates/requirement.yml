@@ -1,0 +1,65 @@
+# ============================================================
+# CMN REQUIREMENT TEMPLATE (YAML / Machine-readable form)
+# Use for the requirements.domains index in manifest.yml
+# OR as a standalone machine-readable requirement record.
+#
+# For the full Markdown documentation format (with ACs,
+# rationale, and traceability tables), see:
+# swt-cmn-knowledge-base/09-requirements/templates/requirement-template.md
+#
+# Instructions:
+#   1. Reserve the next ID from manifest.yml → requirements.domains
+#   2. Increment last_used and next_available in the domain entry
+#   3. Add full REQ documentation to 09-requirements/features/*.md
+#   4. Add row to 09-requirements/traceability-matrix.md
+# ============================================================
+
+# <!-- BEGIN: requirement-entry -->
+id: <<REQ-DOMAIN-NNN>>                      # e.g. REQ-AUTH-007
+title: "<<Short imperative title>>"         # e.g. "Multi-Factor Authentication"
+domain: <<AUTH|EMP|MEDIA|NOTIF|PERM|ROLE|GRPC|IMPORT|CUST|INFRA>>
+service: <<service-id>>                     # Owning service. e.g. administration-api
+status: <<Draft|Specified|Implemented|Verified|Deprecated>>
+priority: <<must-have|should-have|nice-to-have>>
+
+# System-shall statement (one sentence)
+description: "The system shall <<verb>> <<object>> <<condition>>."
+
+# Implementation traceability
+implementation:
+  controller: "<<ControllerClass.MethodAsync>>"    # Remove if no HTTP endpoint
+  app_service: "<<AppServiceClass.MethodAsync>>"
+  entity: "<<DomainEntityClass>>"                  # Remove if no entity involved
+  migration: "<<MigrationName>>"                   # Remove if no DB change
+
+# Linked business rules
+business_rules:
+  - <<BR-DOMAIN-NNN>>
+
+# Acceptance criteria count (full ACs are in the feature doc)
+acceptance_criteria_count: <<N>>
+
+# Test coverage
+tests: <<none|unit|integration|e2e>>
+test_file: "<<path to test file or [Missing]>>"
+
+# Diagram (Mermaid)
+diagram: "swt-cmn-knowledge-base/diagrams/<<diagram-name>>.mermaid"
+
+# Full documentation file
+file: "swt-cmn-knowledge-base/09-requirements/features/<<feature-file>>.md"
+# <!-- END: requirement-entry -->
+
+# ============================================================
+# STATUS DEFINITIONS:
+#   Draft        — being written, not yet reviewed
+#   Specified    — reviewed and approved, not yet coded
+#   Implemented  — code exists, ACs not formally verified
+#   Verified     — ACs verified by tests or formal sign-off
+#   Deprecated   — requirement no longer applicable
+#
+# PRIORITY DEFINITIONS:
+#   must-have    — system cannot ship without this
+#   should-have  — significant value, acceptable to defer once
+#   nice-to-have — low priority, implement if time allows
+# ============================================================

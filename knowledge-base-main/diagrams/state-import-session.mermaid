@@ -1,0 +1,49 @@
+---
+title: CMN — Employee Import Session State Machine
+---
+stateDiagram-v2
+    [*] --> Validating : POST /employee/validate-import\n(file upload)
+
+    Validating : Validating\n(file parsing + row validation)
+
+    Valid : Valid\n(CanImport = true)\nSessionId exists in Redis\nTTL: 30 minutes
+
+    Invalid : Invalid\n(CanImport = false)\nHasFormatError = true\nSessionId exists in Redis\nTTL: 30 minutes
+
+    PartiallyValid : Partially Valid\n(CanImport = true)\nHasDataError = true, HasErrorFile = true\nValid rows will be imported\nError rows skipped
+
+    Imported : Imported\n(execute complete)
+
+    Expired : Expired\n(Redis TTL elapsed)
+
+    Validating --> Valid : All rows pass validation\nCanImport = true\nHasFormatError = false\nHasDataError = false
+    Validating --> Invalid : File format errors\nCanImport = false\nHasFormatError = true
+    Validating --> PartiallyValid : Some rows have data errors\nCanImport = true\nHasErrorFile = true\nValidRowCount > 0
+
+    Valid --> Imported : POST /employee/import { SessionId }\nRace-condition re-check\nCreate IdentityUser + Employee per row
+    PartiallyValid --> Imported : POST /employee/import { SessionId }\nImports valid rows only\nSkips duplicate/error rows
+
+    Valid --> Expired : 30min TTL elapsed\nSession evicted from Redis
+    Invalid --> Expired : 30min TTL elapsed
+    PartiallyValid --> Expired : 30min TTL elapsed
+
+    Expired --> [*] : ExecuteImportAsync throws\n(session not found in Redis)
+    Imported --> [*] : Terminal
+
+    note right of Valid
+        Redis key: import_employee_{sessionId}
+        Contains: ValidRows[], AllRows[], Errors[]
+        SessionId returned to frontend for step 2
+    end note
+
+    note right of PartiallyValid
+        Error file available at:
+        GET /employee/error-file/{sessionId}
+        Contains row-level error details (XLSX)
+    end note
+
+    note right of Imported
+        Student email format:
+        {StudentCode}@student.edu.vn
+        IsFirstLogin = true for all imported employees
+    end note

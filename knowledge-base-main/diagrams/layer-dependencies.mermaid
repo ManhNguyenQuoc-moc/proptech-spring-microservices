@@ -1,0 +1,48 @@
+---
+title: CMN .NET Service Layer Dependencies
+---
+graph LR
+    subgraph "HTTP Layer"
+        CTRL["HttpApi<br/>(Controller)"]
+    end
+
+    subgraph "Application Layer"
+        CONTRACTS["Application.Contracts<br/>(Interfaces + DTOs + Validators)"]
+        APP["Application<br/>(Business Logic)"]
+    end
+
+    subgraph "Domain Layer"
+        DOM["Domain<br/>(Entities + Events)"]
+        DOMSHARED["Domain.Shared<br/>(Consts + Enums + Error Codes)"]
+    end
+
+    subgraph "Infrastructure Layer"
+        EF["EntityFrameworkCore<br/>(DbContext + Migrations)"]
+    end
+
+    subgraph "Shared Libraries"
+        BASE["AppControllerBase<br/>(CMN.Shared.Hosting.Microservices)"]
+        FILTER["CMNAbpExceptionFilter<br/>(CMN.Shared.Hosting.AspNetCore)"]
+        RESULT["ApiResult&lt;T&gt;<br/>(CMN.Shared.CrossCuttingConcerns)"]
+    end
+
+    CTRL --> CONTRACTS
+    CTRL --> BASE
+    CTRL --> FILTER
+    BASE --> RESULT
+
+    APP --> CONTRACTS
+    APP --> DOM
+
+    CONTRACTS --> DOMSHARED
+    DOM --> DOMSHARED
+
+    EF --> DOM
+    EF --> DOMSHARED
+
+    style CTRL fill:#4a90d9,color:#fff
+    style APP fill:#50b86c,color:#fff
+    style CONTRACTS fill:#f5a623,color:#fff
+    style DOM fill:#e74c3c,color:#fff
+    style DOMSHARED fill:#95a5a6,color:#fff
+    style EF fill:#8e44ad,color:#fff

@@ -1,0 +1,73 @@
+# ============================================================
+# CMN SERVICE TEMPLATE
+# Use to add a new service entry to _meta/manifest.yml
+#
+# Instructions:
+#   1. Copy this block into manifest.yml → services array
+#   2. Replace all <<PLACEHOLDERS>>
+#   3. Remove comment lines before committing
+#   4. Update ownership.service_owners in manifest.yml
+# ============================================================
+
+# <!-- BEGIN: service-entry -->
+- id: <<service-id>>                        # kebab-case, unique. e.g. "reporting-api"
+  name: "<<Service Display Name>>"          # Human-readable. e.g. "Reporting API"
+  type: <<type>>                            # backend | gateway | frontend-spa | frontend-nextjs | mobile | tool
+  stack: "<<Technology Stack>>"             # e.g. ".NET 9 + ABP Framework 9.x"
+  path: "<<directory-name>>/"              # relative to monorepo root. e.g. "swt-cmn-reporting-api/"
+  module_claude: "<<directory-name>>/CLAUDE.md"
+
+  # HTTP/gRPC ports (remove grpc block if not applicable)
+  ports:
+    http: <<port>>                          # e.g. 5003
+    grpc: <<port>>                          # Remove if no gRPC server
+
+  # Backend only — SQL Server schema (ADM or CM)
+  db_schema: <<ADM|CM>>                     # Remove entirely for non-backend services
+
+  # Base route prefix for all API endpoints
+  base_route: "/cmn/<<service-prefix>>/api" # e.g. "/cmn/reporting-service/api"
+
+  # gRPC server config (remove if not a gRPC server)
+  grpc:
+    role: <<server|client|both>>
+    port: <<port>>
+    tls: true
+    proto: "src/<<ProjectName>>/Proto/<<service_name>>.proto"
+
+  # Infrastructure and service dependencies
+  dependencies:
+    hard:                                   # Service CANNOT start without these
+      - <<integration-id>>                  # e.g. sql-server, redis, mongodb
+    soft:                                   # Service degrades but starts without these
+      - <<integration-id>>
+    services:                               # Other CMN services this depends on
+      - id: <<service-id>>                  # e.g. administration-api
+        protocol: <<http|grpc>>
+        channel: "<<host:port>>"           # Required for grpc. e.g. "100.69.37.126:50051"
+        tls: true                           # Required for grpc TLS
+        purpose: "<<Why this service is needed>>"
+
+  # Bounded contexts owned by this service (must match bounded_contexts[].id)
+  bounded_contexts:
+    - <<bounded-context-id>>
+
+  status: <<active|stub|internal>>          # active = deployed, stub = placeholder, internal = tooling
+
+  owner: cmn-team                           # Team ID from ownership.teams
+
+  # Optional: surface known issues to AI agents immediately
+  known_issues:
+    - "<<TD-NNN: description>>"
+
+  notes: "<<Any architectural notes AI agents must know before working in this service>>"
+# <!-- END: service-entry -->
+
+# ============================================================
+# AFTER ADDING — also update:
+#   1. bounded_contexts section: add entry for each new context
+#   2. features section: add entries for each new feature
+#   3. ownership.service_owners: add <<service-id>>: cmn-team
+#   4. Module CLAUDE.md: create swt-cmn-<<service-id>>/CLAUDE.md
+#   5. CHANGELOG.md: add Phase entry
+# ============================================================

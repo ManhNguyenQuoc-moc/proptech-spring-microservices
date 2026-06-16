@@ -1,0 +1,65 @@
+# ============================================================
+# CMN BUSINESS RULE TEMPLATE (YAML / Machine-readable form)
+# For the machine-readable rule index and manifest cross-reference.
+#
+# For the full Markdown documentation format (with rationale,
+# source code references, and examples), see:
+# swt-cmn-knowledge-base/09-requirements/templates/business-rule-template.md
+#
+# Instructions:
+#   1. Reserve the next BR ID from manifest.yml → requirements.business_rules.domains
+#   2. Increment last_used and next_available
+#   3. Add full rule to 09-requirements/business-rules.md
+#   4. Add row to 09-requirements/traceability-matrix.md → Business Rules Traceability
+# ============================================================
+
+# <!-- BEGIN: business-rule-entry -->
+id: <<BR-DOMAIN-NNN>>                       # e.g. BR-EMP-005
+title: "<<Short rule title>>"               # e.g. "Manager must exist before assignment"
+domain: <<AUTH|EMP|MEDIA|NOTIF|PERM|ROLE|GRPC|IMPORT|CUST|INFRA>>
+service: <<service-id>>                     # Service where this rule is enforced
+status: <<Confirmed|Inferred|Deprecated>>   # Confirmed = verified from source code
+
+# One-sentence rule statement (invariant that MUST always hold)
+statement: "<<The system SHALL/MUST/NEVER ...>>"
+
+# Where the rule is enforced in the codebase
+enforcement:
+  layer: <<Domain|Application|Infrastructure|API>>
+  file: "<<ClassName.cs or equivalent>>"    # e.g. "EmployeeAppService.cs"
+  method: "<<MethodName>>"                  # e.g. "CreateAsync"
+  how: "<<Brief description of HOW enforcement works>>"
+
+# What happens when the rule is violated
+violation:
+  exception_type: "<<UserFriendlyException|ValidationException|ArgumentException>>"
+  http_status: <<400|401|403|404|422|500>>
+  message_key: "<<L[\"LocalizationKey\"] or literal message>>"
+
+# Linked requirements (what business need does this rule serve)
+linked_requirements:
+  - <<REQ-DOMAIN-NNN>>
+
+# Test coverage for this rule
+tests: <<none|unit|integration>>
+test_file: "<<path to test file or [Missing]>>"
+
+# Optional: data/config that parameterizes this rule
+parameters:
+  - name: "<<ParameterName>>"
+    value: "<<value>>"
+    source: "<<where this value comes from — e.g. MediaFileConsts.MaxFileSize>>"
+# <!-- END: business-rule-entry -->
+
+# ============================================================
+# STATUS DEFINITIONS:
+#   Confirmed  — verified by reading source code (preferred)
+#   Inferred   — derived from behavior/docs, not directly verified
+#   Deprecated — rule no longer applies (keep for history)
+#
+# ENFORCEMENT LAYERS:
+#   Domain         — entity constructor, value object, domain service
+#   Application    — app service method (most common in CMN)
+#   Infrastructure — EF Core constraints, middleware, config
+#   API            — controller-level validation, model binding
+# ============================================================

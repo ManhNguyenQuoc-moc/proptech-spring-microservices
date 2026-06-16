@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: product-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/listing_db?gssencmode=disable
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-init-sql: SET TIME ZONE 'UTC'
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:product_service}
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    schemas: ${DB_SCHEMA:product_service}
+    baseline-on-migrate: true
+    locations: classpath:db/migration

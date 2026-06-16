@@ -1,0 +1,208 @@
+# PropTech Spring Microservices Manifest
+
+version: "1.0"
+schema: "./_meta/manifest.schema.json"
+updated: "2026-06-16"
+
+system:
+  id: proptech-spring-microservices
+  name: "PropTech Spring Microservices"
+  description: "Early-stage PropTech backend monorepo built with Spring Boot microservices."
+  knowledge_base: "knowledge-base-main/"
+  source_of_truth:
+    - "docker-compose.yml"
+    - "server/services/"
+    - "server/infrastructure/"
+    - "client/client-web/"
+    - "client/admin-portal/"
+
+services:
+  - id: client-web
+    name: "Client Web"
+    type: frontend
+    stack: "Next.js + React + TypeScript"
+    path: "client/client-web/"
+    domain: customer
+    status: scaffold
+    routes:
+      - path: "/"
+        domain: customer
+      - path: "/customer"
+        domain: customer
+
+  - id: admin-portal
+    name: "Admin Portal"
+    type: frontend
+    stack: "Next.js + React + TypeScript"
+    path: "client/admin-portal/"
+    domain: admin
+    status: scaffold
+    routes:
+      - path: "/"
+        domain: admin
+
+  - id: user-service
+    name: "User Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Data JPA"
+    path: "server/services/user-service/"
+    port: 8081
+    package: "com.proptech.user"
+    db:
+      engine: postgresql
+      database: listing_db
+      schema: user_service
+      migration: flyway
+    status: scaffold
+    owns:
+      - users
+    endpoints: []
+
+  - id: gateway-service
+    name: "Gateway Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Cloud Gateway"
+    path: "server/services/gateway-service/"
+    port: 8080
+    package: "com.proptech.gateway"
+    status: route-proxy
+    routes:
+      - path: "/api/users/**"
+        target: "user-service:8081"
+      - path: "/api/products/**"
+        target: "product-service:8082"
+      - path: "/api/listings/**"
+        target: "listing-service:8083"
+      - path: "/api/orders/**"
+        target: "order-service:8084"
+      - path: "/api/payments/**"
+        target: "payment-service:8085"
+
+  - id: product-service
+    name: "Product Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Data JPA"
+    path: "server/services/product-service/"
+    port: 8082
+    package: "com.proptech.product"
+    db:
+      engine: postgresql
+      database: listing_db
+      schema: product_service
+      migration: flyway
+    status: scaffold
+    owns:
+      - products
+    endpoints: []
+
+  - id: listing-service
+    name: "Listing Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Data JPA"
+    path: "server/services/listing-service/"
+    port: 8083
+    package: "com.proptech.listing"
+    db:
+      engine: postgresql
+      database: listing_db
+      schema: listing_service
+      migration: flyway
+    status: prototype-api
+    owns:
+      - listings
+    endpoints:
+      - method: GET
+        path: "/api/listings"
+        auth: none
+      - method: POST
+        path: "/api/listings"
+        auth: none
+
+  - id: order-service
+    name: "Order Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Data JPA"
+    path: "server/services/order-service/"
+    port: 8084
+    package: "com.proptech.order"
+    db:
+      engine: postgresql
+      database: listing_db
+      schema: order_service
+      migration: flyway
+    status: scaffold
+    owns:
+      - orders
+    endpoints: []
+
+  - id: payment-service
+    name: "Payment Service"
+    type: backend
+    stack: "Java 21 + Spring Boot 3.5.4 + Spring Data JPA"
+    path: "server/services/payment-service/"
+    port: 8085
+    package: "com.proptech.payment"
+    db:
+      engine: postgresql
+      database: listing_db
+      schema: payment_service
+      migration: flyway
+    status: scaffold
+    owns:
+      - payments
+    endpoints: []
+
+integrations:
+  - id: postgres
+    name: "PostgreSQL"
+    type: database
+    technology: "PostgreSQL 15"
+    docker_service: postgres
+    container_name: proptech-postgres
+    host_port: 5433
+    container_port: 5432
+    database: listing_db
+    used_by:
+      - user-service
+      - product-service
+      - listing-service
+      - order-service
+      - payment-service
+
+bounded_contexts:
+  - id: gateway
+    service: gateway-service
+    status: route-proxy
+  - id: user
+    service: user-service
+    status: scaffold
+  - id: product
+    service: product-service
+    status: scaffold
+  - id: listing
+    service: listing-service
+    status: prototype-api
+  - id: order
+    service: order-service
+    status: scaffold
+  - id: payment
+    service: payment-service
+    status: scaffold
+
+technical_debt:
+  - id: TD-KB-001
+    title: "Legacy docs remain outside core KB"
+    severity: medium
+    description: "Some playbooks, diagrams, and requirements still need Spring Boot normalization."
+  - id: TD-SVC-001
+    title: "No security implementation"
+    severity: high
+    service: all
+    description: "No authentication or authorization is implemented yet."
+
+ai_agent_guidance:
+  before_any_task:
+    - "Read README.md and the target services/*.md file."
+    - "Verify assumptions against server/services source code."
+    - "Gateway is implemented as an API route proxy; do not assume authentication, messaging, or caching exists."
+    - "Keep service boundaries explicit; do not add cross-service JPA relationships."

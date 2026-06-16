@@ -1,0 +1,68 @@
+sync_version: "1.0.0"
+
+watch_rules:
+  - trigger: "server/services/*/src/main/java/**/*.java"
+    update:
+      - "services/*.md"
+      - "04-business-domain.md"
+      - "_meta/manifest.yml"
+    anchor: "domain-entities"
+
+  - trigger: "server/services/*/src/main/resources/application.yml"
+    update:
+      - "01-architecture.md"
+      - "02-tech-stack.md"
+      - "08-deployment-cicd.md"
+      - "_meta/manifest.yml"
+
+  - trigger: "server/services/*/src/main/resources/db/migration/*.sql"
+    update:
+      - "04-business-domain.md"
+      - "08-deployment-cicd.md"
+      - "services/*.md"
+
+  - trigger: "server/services/*/pom.xml"
+    update:
+      - "02-tech-stack.md"
+      - "services/*.md"
+
+  - trigger: "docker-compose.yml"
+    update:
+      - "01-architecture.md"
+      - "06-integrations.md"
+      - "08-deployment-cicd.md"
+      - "_meta/manifest.yml"
+
+  - trigger: "server/infrastructure/postgres/init-db.sql"
+    update:
+      - "01-architecture.md"
+      - "04-business-domain.md"
+      - "06-integrations.md"
+
+  - trigger: "client/client-web/src/**/*.ts"
+    update:
+      - "services/client-web.md"
+      - "02-tech-stack.md"
+
+  - trigger: "client/client-web/src/**/*.tsx"
+    update:
+      - "services/client-web.md"
+
+  - trigger: "client/client-web/package.json"
+    update:
+      - "services/client-web.md"
+      - "02-tech-stack.md"
+
+  - trigger: "client/admin-portal/src/**/*.ts"
+    update:
+      - "services/admin-portal.md"
+      - "02-tech-stack.md"
+
+  - trigger: "client/admin-portal/src/**/*.tsx"
+    update:
+      - "services/admin-portal.md"
+
+  - trigger: "client/admin-portal/package.json"
+    update:
+      - "services/admin-portal.md"
+      - "02-tech-stack.md"

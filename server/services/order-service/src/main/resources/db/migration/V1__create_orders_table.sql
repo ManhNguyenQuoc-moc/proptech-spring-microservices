@@ -1,0 +1,10 @@
+CREATE TABLE order_service.orders (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    product_id UUID NOT NULL,
+    total_amount NUMERIC(19, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
+);

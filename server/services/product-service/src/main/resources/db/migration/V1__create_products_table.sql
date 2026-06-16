@@ -1,0 +1,9 @@
+CREATE TABLE product_service.products (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price NUMERIC(19, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
+);
