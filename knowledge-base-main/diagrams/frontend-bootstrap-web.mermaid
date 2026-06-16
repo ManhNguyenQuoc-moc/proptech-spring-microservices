@@ -1,0 +1,54 @@
+---
+title: CMN — Frontend Bootstrap (Web Apps — Admin + Main)
+---
+sequenceDiagram
+    participant B as Browser
+    participant APP as React App Root<br/>(Vite / Next.js)
+    participant STORE as Redux Store
+    participant HTTP as @core/http<br/>(Axios instance)
+    participant COOKIE as Browser Cookies
+    participant LS as localStorage
+
+    Note over B,LS: App Initialization
+
+    B->>APP: Load page
+    APP->>STORE: createStore() — init all slices<br/>(employee, role, party in initState)
+
+    APP->>HTTP: Create Axios instance<br/>baseURL: VITE_API_URL (admin) or NEXT_PUBLIC_API_URL (web-app)<br/>timeout: 3 minutes (180000ms)
+
+    Note over HTTP,LS: Register Request Interceptor
+    HTTP->>HTTP: interceptors.request.use()
+    HTTP->>COOKIE: Read ACCESS_TOKEN_KEY
+    COOKIE-->>HTTP: accessToken (or null)
+    HTTP->>HTTP: Set Authorization: Bearer {accessToken}
+    HTTP->>LS: Read tenantId
+    LS-->>HTTP: tenantId
+    HTTP->>HTTP: Set X-Tenant: {tenantId}
+    HTTP->>HTTP: Set Accept-Language: vi
+
+    Note over HTTP,COOKIE: Register Response Interceptor
+    HTTP->>HTTP: interceptors.response.use(onSuccess, onError)
+
+    APP-->>B: Render application (initial route)
+
+    rect rgb(240, 255, 240)
+        Note over B,COOKIE: 401 Auto-Refresh (triggered by any failed API call)
+        B->>HTTP: Any API request → 401 Unauthorized
+        HTTP->>COOKIE: Read REFRESH_TOKEN_KEY
+        COOKIE-->>HTTP: refreshToken
+        HTTP->>HTTP: POST .../api/auth/refresh-login { RefreshToken }
+        HTTP-->>HTTP: New tokens received
+        HTTP->>COOKIE: Set ACCESS_TOKEN_KEY = newAccessToken
+        HTTP->>COOKIE: Set REFRESH_TOKEN_KEY = newRefreshToken
+        HTTP->>HTTP: Retry original request with new token
+    end
+
+    rect rgb(255, 245, 230)
+        Note over B,APP: Error Routing
+        B->>HTTP: API response 403
+        HTTP->>APP: Navigate to /403
+        B->>HTTP: API response 404
+        HTTP->>APP: Navigate to /404
+        B->>HTTP: API response 500
+        HTTP->>APP: Navigate to /500
+    end

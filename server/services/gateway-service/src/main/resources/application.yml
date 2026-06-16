@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+gateway:
+  routes:
+    user-service: ${GATEWAY_USER_SERVICE_URI:http://localhost:8081}
+    product-service: ${GATEWAY_PRODUCT_SERVICE_URI:http://localhost:8082}
+    listing-service: ${GATEWAY_LISTING_SERVICE_URI:http://localhost:8083}
+    order-service: ${GATEWAY_ORDER_SERVICE_URI:http://localhost:8084}
+    payment-service: ${GATEWAY_PAYMENT_SERVICE_URI:http://localhost:8085}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Gateway Service
+        url: /v3/api-docs
+      - name: User Service
+        url: /v3/api-docs/user-service
+      - name: Product Service
+        url: /v3/api-docs/product-service
+      - name: Listing Service
+        url: /v3/api-docs/listing-service
+      - name: Order Service
+        url: /v3/api-docs/order-service
+      - name: Payment Service
+        url: /v3/api-docs/payment-service

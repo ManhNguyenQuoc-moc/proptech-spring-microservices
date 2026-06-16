@@ -1,0 +1,52 @@
+---
+title: CMN — Domain Event Choreography
+---
+flowchart LR
+    subgraph AuthAppService["AuthAppService — Event Publishers"]
+        A1["LoginAsync()\n[DISABLED — commented out]"]
+        A2["RequestPasswordRecoveryAsync()"]
+        A3["ResetPasswordAsync()"]
+    end
+
+    subgraph LocalBus["ABP Local Event Bus"]
+        E1["SendOTPEvent\n{ UserId, Email }"]
+        E2["RecoveryPasswordEvent\n{ Email, ResetUrl, UserId }"]
+        E3["PasswordResetSuccessEvent\n{ UserId, ResetTime }"]
+    end
+
+    subgraph Handlers["ILocalEventHandler implementations"]
+        H1["SendOTPEventHandler\n(Administration API)"]
+        H2["RecoveryPasswordEventHandler\n(Administration API)"]
+        H3["PasswordResetSuccessEventHandler\n(Administration API)"]
+    end
+
+    subgraph Actions["Handler Actions"]
+        ACT1["1. Check OTP:Enabled config\n2. Generate 6-digit OTP\n   RandomNumberGenerator.GetInt32\n   or OTP:OTPDefault (123456)\n3. Send SEND_OTP template\n   to user.Email (CC field)"]
+        ACT2["1. Lookup tenant name\n   (ITenantRepository)\n2. Send PASSWORD_RECOVERY template\n   To: eventData.Email"]
+        ACT3["1. Send PASSWORD_RECOVERY_SUCCESS\n   template to user email"]
+    end
+
+    subgraph MailSend["MailTemplateAppService.SendEmailAsync"]
+        M["MongoDB lookup by Code\n→ Replace ##placeholders##\n→ IEmailSender.SendAsync (MailKit/SMTP)"]
+    end
+
+    A1 -. "publish [COMMENTED OUT]" .-> E1
+    A2 -->|"publish"| E2
+    A3 -->|"publish"| E3
+
+    E1 -->|"handle"| H1
+    E2 -->|"handle"| H2
+    E3 -->|"handle"| H3
+
+    H1 --> ACT1
+    H2 --> ACT2
+    H3 --> ACT3
+
+    ACT1 -->|"SendEmailAsync\n(SEND_OTP)"| M
+    ACT2 -->|"SendEmailAsync\n(PASSWORD_RECOVERY)"| M
+    ACT3 -->|"SendEmailAsync\n(PASSWORD_RECOVERY_SUCCESS)"| M
+
+    style A1 fill:#ffcccc,stroke:#cc0000,color:#000
+    style E1 fill:#ffe0e0,stroke:#cc0000,color:#000
+    style H1 fill:#ffe0e0,stroke:#cc0000,color:#000
+    style ACT1 fill:#fff0f0,color:#000

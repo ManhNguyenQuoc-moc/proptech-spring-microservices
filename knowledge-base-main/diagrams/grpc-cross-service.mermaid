@@ -1,0 +1,68 @@
+---
+title: CMN — gRPC Cross-Service Communication
+---
+sequenceDiagram
+    participant CA as Customer API<br/>Application Service
+    participant GC as gRPC Channel<br/>(:50051 TLS HTTP/2)
+    participant PG as AdministrationServicePermissionGrpc<br/>[DisableAuditing] [IntegrationService]
+    participant MG as AdministrationServiceMailTemplateGrpc<br/>[DisableAuditing] [IntegrationService]
+    participant PC as IPermissionChecker<br/>(ABP)
+    participant MT as IMailTemplateAppService
+    participant UOW as IUnitOfWorkManager
+
+    rect rgb(240, 248, 255)
+        Note over CA,PC: Permission Check (IsGrantedPermission)
+
+        CA->>GC: IAdministrationServicePermissionGrpc<br/>.IsGrantedPermissionAsync(userId, permissionKey)
+        GC->>PG: PermissionRequest { UserId, PermissionKey }
+
+        PG->>PC: IPermissionChecker.IsGrantedAsync(userId, permissionKey)
+        PC-->>PG: bool isGranted
+
+        PG-->>GC: PermissionResponse { IsGranted: true/false }
+        GC-->>CA: isGranted
+
+        Note over PG: On any exception:
+        PG->>GC: PermissionResponse { IsGranted: false }
+        Note over PG: [Silent fail — never throws to caller]
+    end
+
+    rect rgb(240, 248, 255)
+        Note over CA,PC: Batch Permission Check (IsGrantedMultiplePermissions)
+
+        CA->>GC: IsGrantedMultiplePermissionsAsync(userId, permissionKeys[])
+        GC->>PG: MultiplePermissionsRequest { UserId, PermissionKeys[] }
+
+        PG->>PC: IsGrantedAsync per key
+        PC-->>PG: results[]
+
+        PG->>PG: allGranted = results.All(r => r)\nallProhibited = results.All(r => !r)\nresult = allGranted OR NOT allProhibited
+        PG-->>GC: PermissionResponse { IsGranted }
+        GC-->>CA: isGranted
+    end
+
+    rect rgb(240, 255, 240)
+        Note over CA,MT: Mail Template Send (SendEmail)
+
+        CA->>GC: IAdministrationServiceMailTemplateGrpc<br/>.SendEmailAsync(SendMailTemplateRequest)
+        GC->>MG: SendMailTemplateRequest<br/>{ TemplateCode, Recipients[], DataDictionary{} }
+
+        MG->>UOW: IUnitOfWorkManager.Begin()
+        MG->>MT: IMailTemplateAppService.SendEmailAsync(...)
+        MT-->>MG: sent
+
+        MG-->>GC: SendMailTemplateResponse<br/>{ IsSuccess: true, Data: "success", Error: null }
+        GC-->>CA: Response
+
+        Note over MG: On any exception:
+        MG->>GC: SendMailTemplateResponse<br/>{ IsSuccess: false, Data: null, Error: ex.Message }
+        Note over MG: [Silent fail — error returned in response, not thrown]
+    end
+
+    rect rgb(255, 245, 230)
+        Note over CA,PG: Test Stub (TestPermission)
+        CA->>GC: TestPermissionAsync()
+        GC->>PG: TestPermissionRequest { }
+        PG-->>GC: PermissionResponse { IsGranted: true }
+        Note over PG: Always returns true — diagnostic stub only
+    end

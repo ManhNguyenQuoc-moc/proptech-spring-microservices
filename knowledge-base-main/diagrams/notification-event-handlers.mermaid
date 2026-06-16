@@ -1,0 +1,49 @@
+---
+title: CMN — Notification Domain Event Handlers
+---
+flowchart TD
+    subgraph AuthAppService["AuthAppService (Administration API)"]
+        LOGIN["LoginAsync()"]
+        RECOVER["RequestPasswordRecoveryAsync()"]
+        RESET["ResetPasswordAsync()"]
+    end
+
+    subgraph Events["Local Domain Events"]
+        OTP_EV["SendOTPEvent\n{ UserId, Email }"]
+        REC_EV["RecoveryPasswordEvent\n{ Email, ResetUrl, UserId }"]
+        SUC_EV["PasswordResetSuccessEvent\n{ UserId, ResetTime }"]
+    end
+
+    subgraph Handlers["Local Event Handlers"]
+        OTP_H["SendOTPEventHandler"]
+        REC_H["RecoveryPasswordEventHandler"]
+        SUC_H["PasswordResetSuccessEventHandler"]
+    end
+
+    subgraph MailTemplates["Mail Templates (MongoDB)"]
+        T1["SEND_OTP\nPlaceholders:\n##OTP.OTPCode##\n##OTP.ExpireMinutes##\n##User.Name##"]
+        T2["PASSWORD_RECOVERY\nPlaceholders:\n##User.Name##\n##User.UserName##\n##User.TenantName##\n##PasswordReset.ResetLink##\n##PasswordReset.ExpireHours##"]
+        T3["PASSWORD_RECOVERY_SUCCESS\nPlaceholders:\n##User.Name##\n##User.UserName##\n##User.TenantName##\n##PasswordReset.Time##\n##PasswordReset.Date##"]
+    end
+
+    SMTP["SMTP (MailKit)\nTo: user email"]
+
+    LOGIN -. "DISABLED — publish call commented out" .-> OTP_EV
+    RECOVER -->|"Publish"| REC_EV
+    RESET -->|"Publish"| SUC_EV
+
+    OTP_EV -->|"Handle"| OTP_H
+    REC_EV -->|"Handle"| REC_H
+    SUC_EV -->|"Handle"| SUC_H
+
+    OTP_H -->|"Read OTP:Enabled\nOTP:OTPDefault config\nGenerate 6-digit OTP\n(RandomNumberGenerator)\nor use default 123456"| T1
+    REC_H -->|"Lookup tenant name\nfrom ITenantRepository"| T2
+    SUC_H --> T3
+
+    T1 -->|"SendEmailAsync"| SMTP
+    T2 -->|"SendEmailAsync"| SMTP
+    T3 -->|"SendEmailAsync"| SMTP
+
+    style OTP_EV fill:#ffcccc,stroke:#cc0000
+    style LOGIN fill:#ffcccc,stroke:#cc0000
+    style T1 fill:#ffe0e0

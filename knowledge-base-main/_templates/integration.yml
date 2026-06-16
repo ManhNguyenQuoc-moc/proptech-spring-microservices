@@ -1,0 +1,82 @@
+# ============================================================
+# CMN INTEGRATION TEMPLATE
+# Use to add a new infrastructure/external system dependency
+# to _meta/manifest.yml → integrations array.
+#
+# Instructions:
+#   1. Copy this block into manifest.yml → integrations array
+#   2. Replace all <<PLACEHOLDERS>>
+#   3. Add integration ID to services[].dependencies.hard or .soft
+#   4. Add config keys to appsettings.json (defaults only — secrets go in appsettings.secrets.json)
+# ============================================================
+
+# <!-- BEGIN: integration-entry -->
+- id: <<integration-id>>                    # kebab-case, unique. e.g. "elasticsearch"
+  name: "<<Integration Display Name>>"      # e.g. "Elasticsearch"
+  type: <<type>>                            # database | cache | document-store | file-storage | email | push-notifications | rpc | queue | search
+  technology: "<<Technology and version>>"  # e.g. "Elasticsearch 8.x"
+
+  # Connection info
+  host: "<<hostname-or-IP>>"
+  port: <<port>>
+
+  # Database/index name (remove if not applicable)
+  database: "<<database-or-index-name>>"
+
+  # Services that use this integration
+  used_by:
+    - <<service-id>>
+
+  # appsettings.json key for connection string / config
+  config_key: "<<Section:Key>>"             # e.g. "ConnectionStrings:Elasticsearch"
+
+  # Reference to secrets file (never commit actual credentials)
+  credentials_ref: "appsettings.secrets.json"
+
+  # Health check command (optional, for deployment verification)
+  health_check: "<<command or endpoint>>"   # e.g. "GET http://host:port/_cluster/health"
+
+  # Key patterns (for Redis-like stores only)
+  key_patterns:
+    - pattern: "<<{param}:suffix>>"
+      purpose: "<<What this key stores>>"
+      ttl_hours: <<N>>                      # or ttl_minutes: <<N>>
+      owner: <<service-id>>
+      status: <<active|disabled>>
+
+  # Collections (for document stores like MongoDB)
+  collections:
+    - id: "<<collection-name>>"
+      entity: "<<DomainEntityClass>>"
+      multi_tenant: <<true|false>>
+      description: "<<What this collection stores>>"
+
+  # Operations (for RPC integrations like gRPC)
+  operations:
+    - id: "<<OperationName>>"
+      handler: "<<HandlerClass.MethodAsync>>"
+      pattern: <<silent-fail|throw>>
+      uow: <<true|false>>                   # Requires Unit of Work wrapping
+
+  # Architecture constraints AI agents must respect
+  architecture_constraint: "<<e.g. Never cross-query between schemas>>"
+
+  # Known issues / technical debt
+  known_issues:
+    - "<<TD-NNN: description>>"
+
+  notes: "<<Any integration-specific notes for AI agents>>"
+# <!-- END: integration-entry -->
+
+# ============================================================
+# TYPE REFERENCE:
+#   database          — relational DB (SQL Server, PostgreSQL)
+#   cache             — key-value cache (Redis, Memcached)
+#   document-store    — document DB (MongoDB, Couchbase)
+#   file-storage      — blob/file storage (Cloudinary, S3, Azure Blob)
+#   email             — SMTP / email service (MailKit, SendGrid)
+#   push-notifications — mobile/web push (Firebase, APNs)
+#   rpc               — remote procedure call (gRPC, SOAP)
+#   queue             — message queue (RabbitMQ, Azure Service Bus)
+#   search            — full-text search (Elasticsearch, Solr)
+# ============================================================

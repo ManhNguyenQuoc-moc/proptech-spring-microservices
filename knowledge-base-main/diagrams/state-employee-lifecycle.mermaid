@@ -1,0 +1,31 @@
+---
+title: CMN — Employee Lifecycle State Machine
+---
+stateDiagram-v2
+    [*] --> FirstLogin : CreateAsync()\nIsFirstLogin = true\nIdentityUser created\nIsActive = true
+
+    FirstLogin : FirstLogin\n(IsFirstLogin = true, IsActive = true)
+    Active : Active\n(IsFirstLogin = false, IsActive = true)
+    Deactivated : Deactivated\n(IsActive = false)\nIdentityUser lockout = MaxValue
+
+    FirstLogin --> Active : LoginAsync() success\nIsFirstLogin = false
+    Active --> Deactivated : UpdateDetailAsync(IsActive = false)\nUserManager.SetLockoutEnabled(true)\nUserManager.SetLockoutEndDate(MaxValue)
+    Deactivated --> Active : UpdateDetailAsync(IsActive = true)\nUserManager.SetLockoutEndDate(null)
+
+    note right of FirstLogin
+        Employee.Code is the login username
+        Employee.UserId links to IdentityUser
+        Password set by IdentityManager
+    end note
+
+    note right of Deactivated
+        Login blocked at IdentityManager level
+        Employee record still exists in DB
+        Counted in totalDeactiveEmployees
+    end note
+
+    note right of Active
+        Login allowed (if lockout not set)
+        Counted in totalActiveEmployees
+        Can be assigned Positions + OrgUnit
+    end note

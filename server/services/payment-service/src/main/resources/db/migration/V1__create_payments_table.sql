@@ -1,0 +1,10 @@
+CREATE TABLE payment_service.payments (
+    id UUID PRIMARY KEY,
+    order_id UUID NOT NULL,
+    amount NUMERIC(19, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    payment_method VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
+);

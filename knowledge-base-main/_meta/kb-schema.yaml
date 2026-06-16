@@ -1,0 +1,85 @@
+schema_version: "1.0.0"
+knowledge_base:
+  name: "PropTech Spring Microservices Knowledge Base"
+  root: "knowledge-base-main/"
+  generated: "2026-06-16"
+  source_of_truth: code
+
+structure:
+  meta: "_meta/"
+  templates: "_templates/"
+  sync: "_sync/"
+  core_docs:
+    - "00-glossary.md"
+    - "01-architecture.md"
+    - "02-tech-stack.md"
+    - "03-conventions.md"
+    - "04-business-domain.md"
+    - "05-flows.md"
+    - "06-integrations.md"
+    - "07-security-permissions.md"
+    - "08-deployment-cicd.md"
+  service_docs: "services/"
+  diagrams: "diagrams/"
+  playbooks: "playbooks/"
+  scripts: "scripts/"
+
+services:
+  - id: client-web
+    file: "services/client-web.md"
+    source: "client/client-web/"
+    type: "nextjs-customer"
+    port_dev: 3000
+
+  - id: admin-portal
+    file: "services/admin-portal.md"
+    source: "client/admin-portal/"
+    type: "nextjs-admin"
+    port_dev: 3001
+
+  - id: gateway-service
+    file: "services/gateway-service.md"
+    source: "server/services/gateway-service/"
+    type: "spring-cloud-gateway"
+    port_dev: 8080
+
+  - id: user-service
+    file: "services/user-service.md"
+    source: "server/services/user-service/"
+    type: "spring-boot"
+    port_dev: 8081
+    db_schema: "user_service"
+
+  - id: product-service
+    file: "services/product-service.md"
+    source: "server/services/product-service/"
+    type: "spring-boot"
+    port_dev: 8082
+    db_schema: "product_service"
+
+  - id: listing-service
+    file: "services/listing-service.md"
+    source: "server/services/listing-service/"
+    type: "spring-boot"
+    port_dev: 8083
+    db_schema: "listing_service"
+
+  - id: order-service
+    file: "services/order-service.md"
+    source: "server/services/order-service/"
+    type: "spring-boot"
+    port_dev: 8084
+    db_schema: "order_service"
+
+  - id: payment-service
+    file: "services/payment-service.md"
+    source: "server/services/payment-service/"
+    type: "spring-boot"
+    port_dev: 8085
+    db_schema: "payment_service"
+
+update_policy:
+  code_wins: true
+  conflict_resolution: update_documentation
+  anchor_format: "<!-- KB-ANCHOR: {id} -->"
+  review_trigger: on_file_change

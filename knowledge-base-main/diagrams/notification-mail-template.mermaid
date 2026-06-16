@@ -1,0 +1,44 @@
+---
+title: CMN — Mail Template Send Paths
+---
+sequenceDiagram
+    participant EH as Domain Event Handler<br/>(Administration API)
+    participant CUST as Customer API<br/>Application Service
+    participant GRPC_C as gRPC Client<br/>(CustomerAPI → AdminAPI)
+    participant GRPC_S as AdministrationServiceMailTemplateGrpc<br/>(port :50051 TLS)
+    participant UOW as IUnitOfWorkManager
+    participant MT as MailTemplateAppService<br/>.SendEmailAsync
+    participant MONGO as MongoDB<br/>(swt_cmn.adm_MailTemplate)
+    participant ES as IEmailSender<br/>(MailKit / SMTP)
+
+    rect rgb(240, 248, 255)
+        Note over EH,ES: Path A — Direct (Administration API domain event)
+        EH->>MT: SendEmailAsync(templateCode, recipients, dataDictionary)
+        MT->>MT: Validate: recipients list not empty
+        MT->>MONGO: FindAsync WHERE Code = @templateCode
+        MONGO-->>MT: MailTemplate { Subject, Body, ... }
+        MT->>MT: For each ##Group.Field## in Subject+Body:<br/>replace with dataDictionary[key]<br/>(shortCode default = "##")
+        alt Settings:Abp.Mailing.IsTesting == true
+            MT->>MT: Redirect To: override addresses<br/>Prefix subject with "[TEST]"
+        end
+        MT->>ES: IEmailSender.SendAsync(to, subject, body)
+        ES->>ES: MailKit SMTP send<br/>Host: Settings:Abp.Mailing.Smtp.Host<br/>Port: Settings:Abp.Mailing.Smtp.Port<br/>User: Settings:Abp.Mailing.Smtp.UserName
+    end
+
+    rect rgb(240, 255, 240)
+        Note over CUST,ES: Path B — Via gRPC (Customer API → Administration API)
+        CUST->>GRPC_C: MailTemplateGrpcClient.SendEmailAsync(SendMailTemplateRequest)
+        GRPC_C->>GRPC_S: gRPC call to :50051 (TLS HTTP/2)<br/>SendMailTemplateRequest { TemplateCode, Recipients[], DataDictionary{} }
+        GRPC_S->>UOW: IUnitOfWorkManager.Begin()
+        GRPC_S->>MT: IMailTemplateAppService.SendEmailAsync(...)
+        MT->>MONGO: Find template
+        MT->>MT: Replace placeholders
+        MT->>ES: IEmailSender.SendAsync
+        ES-->>MT: Sent
+        MT-->>GRPC_S: Success
+        GRPC_S-->>GRPC_C: SendMailTemplateResponse { IsSuccess: true, Data: "...", Error: null }
+        GRPC_C-->>CUST: Response
+
+        Note over GRPC_S: On any exception:
+        GRPC_S->>GRPC_C: SendMailTemplateResponse { IsSuccess: false, Data: null, Error: ex.Message }
+    end

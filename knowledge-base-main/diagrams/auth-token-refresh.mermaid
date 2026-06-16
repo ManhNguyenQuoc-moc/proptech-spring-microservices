@@ -1,0 +1,46 @@
+---
+title: CMN — Token Refresh Flow (Rotation)
+---
+sequenceDiagram
+    participant FE as Frontend<br/>(@core/http interceptor)
+    participant GW as Web Gateway
+    participant AC as AuthController<br/>(POST /api/auth/refresh-login)
+    participant AS as AuthAppService<br/>.RefreshLoginAsync
+    participant JWT as JWT Parser
+    participant R as Redis
+
+    Note over FE: Triggered when any API call returns HTTP 401
+
+    FE->>FE: Intercept 401 response
+    FE->>FE: Read refreshToken from cookie REFRESH_TOKEN_KEY
+    FE->>FE: Read expired accessToken from cookie ACCESS_TOKEN_KEY
+
+    FE->>GW: POST /cmn/administration-service/api/auth/refresh-login<br/>Body: RefreshTokenInputDto { RefreshToken }<br/>Header: X-Tenant: {tenantId}<br/>[AllowAnonymous]
+    GW->>AC: Forward
+    AC->>AS: RefreshLoginAsync(input)
+
+    Note over AS,JWT: Step 1 — Extract claims from expired token
+    AS->>JWT: ParseExpiredToken(accessToken)
+    JWT-->>AS: Claims: userId, sessionId
+
+    Note over AS,R: Step 2 — Validate refresh token in Redis
+    AS->>R: GET {userId}:{sessionId}
+    R-->>AS: storedRefreshToken
+    AS->>AS: Assert storedRefreshToken == input.RefreshToken
+
+    Note over AS,R: Step 3 — Rotate: delete old, issue new
+    AS->>R: DEL {userId}:{sessionId}
+    AS->>AS: newSessionId = Guid.NewV7()
+    AS->>AS: newAccessToken = CreateJWT(userId, newSessionId)<br/>Expiry=1h
+    AS->>AS: newRefreshToken = "{UUIDv7}-{UUIDv7}"
+    AS->>R: SET {userId}:{newSessionId} = newRefreshToken<br/>TTL 720h
+
+    AS-->>AC: LoginOutputDto { AccessToken, RefreshToken, ... }
+    AC-->>GW: 200 ApiResult<LoginOutputDto>
+    GW-->>FE: 200
+
+    FE->>FE: cookie.set(ACCESS_TOKEN_KEY, newAccessToken)
+    FE->>FE: cookie.set(REFRESH_TOKEN_KEY, newRefreshToken)
+
+    Note over FE: Retry original failed request with new token
+    FE->>GW: Retry original request with new Authorization header

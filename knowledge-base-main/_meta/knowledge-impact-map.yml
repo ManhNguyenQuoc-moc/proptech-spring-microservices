@@ -1,0 +1,142 @@
+# PropTech Knowledge Impact Map
+
+version: "1.0"
+updated: "2026-06-16"
+
+patterns:
+  - id: spring-controllers
+    glob: "server/services/*/src/main/java/**/*Controller.java"
+    impact:
+      docs:
+        - "_meta/manifest.yml"
+        - "services/*.md"
+        - "01-architecture.md"
+    why: "Public REST endpoints must be reflected in service docs and manifest."
+    severity: high
+
+  - id: spring-entities
+    glob: "server/services/*/src/main/java/**/domain/entity/*.java"
+    impact:
+      docs:
+        - "04-business-domain.md"
+        - "services/*.md"
+    why: "Entity fields define the current domain model."
+    severity: high
+    anchors:
+      - "domain-entities"
+
+  - id: spring-repositories
+    glob: "server/services/*/src/main/java/**/infrastructure/repository/*.java"
+    impact:
+      docs:
+        - "services/*.md"
+    why: "Repository capabilities define persistence access."
+    severity: medium
+
+  - id: maven-poms
+    glob: "server/services/*/pom.xml"
+    impact:
+      docs:
+        - "02-tech-stack.md"
+        - "services/*.md"
+    why: "Dependencies determine available framework features."
+    severity: high
+
+  - id: application-config
+    glob: "server/services/*/src/main/resources/application.yml"
+    impact:
+      docs:
+        - "01-architecture.md"
+        - "06-integrations.md"
+        - "08-deployment-cicd.md"
+        - "_meta/manifest.yml"
+    why: "Ports, datasource URLs, schemas, and migration settings are runtime facts."
+    severity: high
+
+  - id: flyway-migrations
+    glob: "server/services/*/src/main/resources/db/migration/*.sql"
+    impact:
+      docs:
+        - "04-business-domain.md"
+        - "08-deployment-cicd.md"
+        - "services/*.md"
+    why: "Migrations define persisted schema."
+    severity: high
+
+  - id: docker-compose
+    glob: "docker-compose.yml"
+    impact:
+      docs:
+        - "01-architecture.md"
+        - "06-integrations.md"
+        - "08-deployment-cicd.md"
+        - "_meta/manifest.yml"
+    why: "Docker Compose defines local topology and service ports."
+    severity: high
+
+  - id: postgres-init
+    glob: "server/infrastructure/postgres/init-db.sql"
+    impact:
+      docs:
+        - "01-architecture.md"
+        - "04-business-domain.md"
+        - "06-integrations.md"
+    why: "Schema initialization affects service database ownership."
+    severity: high
+
+  - id: nextjs-routes
+    glob: "client/client-web/src/app/**/*.tsx"
+    impact:
+      docs:
+        - "services/client-web.md"
+        - "_meta/manifest.yml"
+    why: "App Router files define customer frontend routes."
+    severity: medium
+
+  - id: nextjs-features
+    glob: "client/client-web/src/features/**/*.tsx"
+    impact:
+      docs:
+        - "services/client-web.md"
+    why: "Feature modules define customer UI capability."
+    severity: medium
+
+  - id: nextjs-package
+    glob: "client/client-web/package.json"
+    impact:
+      docs:
+        - "02-tech-stack.md"
+        - "services/client-web.md"
+    why: "Frontend dependencies determine available framework features."
+    severity: medium
+
+  - id: admin-nextjs-routes
+    glob: "client/admin-portal/src/app/**/*.tsx"
+    impact:
+      docs:
+        - "services/admin-portal.md"
+        - "_meta/manifest.yml"
+    why: "App Router files define admin frontend routes."
+    severity: medium
+
+  - id: admin-nextjs-features
+    glob: "client/admin-portal/src/features/**/*.tsx"
+    impact:
+      docs:
+        - "services/admin-portal.md"
+    why: "Feature modules define admin UI capability."
+    severity: medium
+
+  - id: admin-nextjs-package
+    glob: "client/admin-portal/package.json"
+    impact:
+      docs:
+        - "02-tech-stack.md"
+        - "services/admin-portal.md"
+    why: "Admin frontend dependencies determine available framework features."
+    severity: medium
+
+known_gaps:
+  - "Frontend apps are scaffolded but not feature-complete yet."
+  - "No scanner currently updates Mermaid diagrams."
+  - "Legacy playbooks and requirements have not been fully normalized to Spring Boot."

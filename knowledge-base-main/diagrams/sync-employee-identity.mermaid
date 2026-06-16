@@ -1,0 +1,67 @@
+---
+title: CMN — Employee ↔ IdentityUser Synchronization
+---
+sequenceDiagram
+    participant AC as EmployeeController
+    participant AS as EmployeeAppService
+    participant DB as SQL Server (ADM schema)
+    participant IM as IdentityUserManager
+
+    rect rgb(240, 248, 255)
+        Note over AC,IM: Create Employee (CreateAsync)
+
+        AC->>AS: CreateAsync(CreateEmployeeInputDto)
+
+        Note over AS,DB: Step 1 — Uniqueness checks in Employee table
+        AS->>DB: Any Employee WHERE Email = @email AND TenantId = @tenantId?
+        DB-->>AS: false (or throw DuplicateEmail)
+        AS->>DB: Any Employee WHERE OtherEmail = @otherEmail?
+        DB-->>AS: false (or throw DuplicateOtherEmail)
+        AS->>DB: Any Employee WHERE PhoneNumber = @phone?
+        DB-->>AS: false (or throw DuplicatePhone)
+
+        Note over AS,IM: Step 2 — Create IdentityUser first
+        AS->>IM: CreateAsync(IdentityUser { UserName=email, Email, PhoneNumber })
+        IM-->>AS: IdentityUser.Id
+
+        Note over AS,DB: Step 3 — Create Employee linked to IdentityUser
+        AS->>DB: INSERT Employee { ..., UserId=identityUser.Id, IsFirstLogin=true }
+        DB-->>AS: Employee.Id
+
+        AS-->>AC: EmployeeOutputDto
+    end
+
+    rect rgb(240, 255, 240)
+        Note over AC,IM: Update Employee (UpdateDetailAsync — partial update)
+
+        AC->>AS: UpdateDetailAsync(id, UpdateEmployeeInputDto)
+        AS->>DB: Find Employee by Id
+
+        Note over AS,IM: Only loads IdentityUser if identity-linked fields changing
+        alt Name, Email, PhoneNumber, or IsActive in update
+            AS->>IM: FindByIdAsync(employee.UserId)
+            IM-->>AS: IdentityUser
+
+            AS->>AS: employee.Name = input.Name (if provided)
+            AS->>AS: employee.Email = input.Email (if provided)
+            AS->>AS: employee.PhoneNumber = input.PhoneNumber (if provided)
+
+            AS->>IM: Sync: identityUser.Name = employee.Name
+            AS->>IM: Sync: identityUser.Email = employee.Email
+            AS->>IM: Sync: identityUser.UserName = employee.Email
+            AS->>IM: Sync: identityUser.PhoneNumber = employee.PhoneNumber
+
+            alt IsActive = false
+                AS->>IM: SetLockoutEnabledAsync(user, true)
+                AS->>IM: SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue)
+                Note over IM: User cannot log in (permanent lockout until re-activated)
+            else IsActive = true (re-activation)
+                AS->>IM: SetLockoutEndDateAsync(user, null)
+            end
+
+            AS->>IM: UpdateAsync(identityUser)
+        end
+
+        AS->>DB: UPDATE Employee (partial — only changed fields)
+        AS-->>AC: EmployeeOutputDto
+    end

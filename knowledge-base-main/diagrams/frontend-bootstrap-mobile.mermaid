@@ -1,0 +1,57 @@
+---
+title: CMN — Frontend Bootstrap (Mobile App — Flutter/itzone)
+---
+flowchart TD
+    START["App launch\n(main.dart)"]
+
+    subgraph Init["Initialization (before runApp)"]
+        FB["Firebase.initializeApp()\n(Crashlytics, FCM, Performance)"]
+        ENV["flutter_dotenv.load()\n.env / .env.dev / .env.production\nBASE_URL empty in dev"]
+        ERR["FlutterError.onError\n→ FirebaseCrashlytics.recordFlutterFatalError"]
+    end
+
+    subgraph DioSetup["Dio HTTP Client Setup"]
+        DIO["Dio() instance\nbaseURL = dotenv.get('BASE_URL')"]
+        PERF_I["Add FirebasePerformanceDioInterceptor\n(HTTP latency tracing)"]
+        AUTH_I["Add Auth Interceptor:\nRequest: read ACCESS_TOKEN_KEY from get_storage\n→ set Authorization: Bearer {token}\n→ set X-Tenant from get_storage"]
+    end
+
+    subgraph AppSetup["Flutter App Setup"]
+        SCOPE["ProviderScope\n(Riverpod root — wraps entire app)"]
+        ROUTER["go_router init\nRoutes: / splash → /login → /home\n       /selfie, /otp\nAuth guard: splash checks token"]
+        L10N["easy_localization init\nassets/translations/\nDevice locale detection"]
+        ASSETS["flutter_gen lib/gen/\nType-safe asset references\n(images, fonts, SVGs)"]
+    end
+
+    subgraph AuthCheck["Splash Auth Check"]
+        SPLASH["Splash screen widget"]
+        CHECK["Read ACCESS_TOKEN_KEY\nfrom get_storage (unencrypted)"]
+        HAS_TOKEN{"Token exists?"}
+        HOME["/home\n(Dashboard + Maps)"]
+        LOGIN["/login\n(Email/Password + Google Sign-In)"]
+    end
+
+    START --> FB
+    START --> ENV
+    START --> ERR
+
+    FB --> DIO
+    ENV --> DIO
+
+    DIO --> PERF_I --> AUTH_I
+
+    AUTH_I --> SCOPE
+    SCOPE --> ROUTER
+    SCOPE --> L10N
+    SCOPE --> ASSETS
+
+    ROUTER --> SPLASH
+    SPLASH --> CHECK
+    CHECK --> HAS_TOKEN
+
+    HAS_TOKEN -->|"Yes"| HOME
+    HAS_TOKEN -->|"No"| LOGIN
+
+    style DIO fill:#4a90d9,color:#fff
+    style SCOPE fill:#50b86c,color:#fff
+    style AUTH_I fill:#f5a623,color:#000

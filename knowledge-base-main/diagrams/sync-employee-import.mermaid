@@ -1,0 +1,93 @@
+---
+title: CMN — Employee Bulk Import (2-Step Flow)
+---
+sequenceDiagram
+    actor HR as HR Admin
+    participant FE as Frontend
+    participant GW as Web Gateway
+    participant EC as EmployeeController
+    participant AS as EmployeeAppService
+    participant R as Redis
+    participant DB as SQL Server
+
+    rect rgb(240, 248, 255)
+        Note over HR,DB: Step 1 — Validate Import (POST /employee/validate-import)
+
+        HR->>FE: Select file (CSV or XLSX) + click validate
+        FE->>GW: POST /cmn/administration-service/api/employee/validate-import<br/>Body: FormData { file }<br/>Header: Authorization, X-Tenant
+
+        GW->>EC: Forward
+        EC->>AS: ValidateImportAsync(file)
+
+        AS->>AS: Check file.Size ≤ 5MB (throw if exceeded)
+        AS->>AS: Parse file → rows[]
+
+        AS->>AS: Check rows.Count ≤ 100 (throw if exceeded)
+
+        loop For each row
+            AS->>AS: Validate required fields (Code, Name, Email, PositionId, OrgUnitId)
+            AS->>AS: Validate format (email format, phone regex, date format)
+            AS->>DB: Check duplicate Code/Email/Phone in existing Employee table
+            AS->>AS: Collect row-level errors
+        end
+
+        alt Has format/data errors
+            AS->>AS: Generate error file (XLSX with error column)
+            AS->>AS: HasErrorFile = true, CanImport = false (if format errors)
+        end
+
+        AS->>AS: sessionId = Guid.NewGuid()
+        AS->>R: SET import_employee_{sessionId}<br/>= { ValidRows[], AllRows[], Errors[] }<br/>TTL 30 minutes
+
+        AS-->>EC: ImportEmployeeValidationResultDto<br/>{ SessionId, TotalRows, ValidRowCount,<br/>ErrorRowCount, SkippedRowCount,<br/>HasFormatError, CanImport, HasErrorFile }
+        EC-->>FE: 200 ApiResult<ImportEmployeeValidationResultDto>
+        FE-->>HR: Show validation summary
+    end
+
+    rect rgb(240, 255, 240)
+        Note over HR,DB: Step 2 — Execute Import (POST /employee/import)
+
+        alt CanImport == true
+            HR->>FE: Click "Execute Import"
+            FE->>GW: POST /cmn/administration-service/api/employee/import<br/>Body: { SessionId }<br/>Header: Authorization, X-Tenant
+
+            GW->>EC: Forward
+            EC->>AS: ExecuteImportAsync(sessionId)
+
+            AS->>R: GET import_employee_{sessionId}
+            R-->>AS: ImportSession { ValidRows[] }
+            AS->>AS: Assert session exists and not expired
+
+            Note over AS,DB: Bulk pre-load lookups (avoid N+1)
+            AS->>DB: Bulk fetch Positions WHERE Id IN [...]
+            AS->>DB: Bulk fetch OrganizationUnits WHERE Id IN [...]
+
+            loop For each valid row (race-condition re-check)
+                AS->>DB: Re-check: Any Employee WHERE Code/Email/Phone = row values?
+                alt Duplicate found (concurrent insert race)
+                    AS->>AS: Skip row (add to skipped count)
+                else No duplicate
+                    AS->>DB: Create IdentityUser<br/>{ UserName = "{StudentCode}@student.edu.vn",<br/>Email = "{StudentCode}@student.edu.vn" }
+                    AS->>DB: Create Employee<br/>{ Code, Name, PositionId, OrgUnitId,<br/>UserId = identityUser.Id, IsFirstLogin: true }
+                end
+            end
+
+            AS-->>EC: ImportResultDto { ImportedCount, SkippedCount }
+            EC-->>FE: 200 ApiResult
+            FE-->>HR: Import complete
+        end
+    end
+
+    rect rgb(255, 245, 230)
+        Note over HR,FE: Error File Download (GET /employee/error-file/{sessionId})
+        alt HasErrorFile == true
+            HR->>FE: Click "Download Error File"
+            FE->>GW: GET /cmn/administration-service/api/employee/error-file/{sessionId}
+            GW->>EC: Forward
+            EC->>AS: GetImportErrorFileAsync(sessionId)
+            AS->>R: GET import_employee_{sessionId}
+            R-->>AS: Session with error data
+            AS-->>EC: File stream (XLSX)
+            EC-->>FE: File download response
+        end
+    end

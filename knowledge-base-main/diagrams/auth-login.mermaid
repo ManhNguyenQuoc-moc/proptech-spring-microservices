@@ -1,0 +1,49 @@
+---
+title: CMN — Login Flow
+---
+sequenceDiagram
+    actor U as User
+    participant FE as Frontend<br/>(@core/http)
+    participant GW as Web Gateway<br/>(YARP)
+    participant AC as AuthController<br/>(POST /api/auth)
+    participant AS as AuthAppService<br/>.LoginAsync
+    participant DB as SQL Server<br/>(ADM schema)
+    participant IM as IdentityManager
+    participant JWT as JWT Builder
+    participant R as Redis
+
+    U->>FE: Submit { UserName: employeeCode, Password }<br/>+ X-Tenant: tenantId in header
+    FE->>GW: POST /cmn/administration-service/api/auth<br/>Body: LoginInputDto<br/>Header: X-Tenant: {tenantId}
+    GW->>AC: Forward (full path preserved)
+    AC->>AS: LoginAsync(input)
+
+    Note over AS,DB: Step 1 — Lookup Employee by Code
+    AS->>DB: SELECT Employee WHERE Code = @username<br/>AND TenantId = @tenantId
+    DB-->>AS: Employee { Id, UserId, Code, IsActive }
+
+    Note over AS,DB: Step 2 — Lookup IdentityUser
+    AS->>DB: SELECT IdentityUser WHERE Id = Employee.UserId
+    DB-->>AS: IdentityUser { Id, UserName, Email, PasswordHash }
+
+    Note over AS,IM: Step 3 — Password Verification
+    AS->>IM: CheckPasswordSignInAsync(user, password)
+    IM-->>AS: SignInResult.Succeeded
+
+    Note over AS,R: Step 4 — Token Generation (DISABLED: IP rate limiting, 2FA)
+    AS->>JWT: CreateJWT(userId, sessionId=Guid.NewV7())<br/>Issuer=ZS, Audience=ZS, Alg=HMAC-SHA256<br/>Expiry=1h, Claim: sessionId
+    JWT-->>AS: accessToken (signed JWT)
+    AS->>AS: refreshToken = "{UUIDv7}-{UUIDv7}"
+    AS->>R: SET {userId}:{sessionId} = refreshToken<br/>TTL 720h (30 days)
+
+    AS-->>AC: LoginOutputDto<br/>{ AccessToken, RefreshToken, UserName,<br/>IsOTPSent: false, IsFirstLogin }
+    AC-->>GW: 200 ApiResult<LoginOutputDto>
+    GW-->>FE: 200 ApiResult<LoginOutputDto>
+
+    Note over FE: Store tokens in cookies (NOT localStorage)
+    FE->>FE: cookie.set(ACCESS_TOKEN_KEY, accessToken)
+    FE->>FE: cookie.set(REFRESH_TOKEN_KEY, refreshToken)
+    FE->>FE: localStorage.set(tenantId)
+    FE-->>U: Redirect to home
+
+    Note over AS: [DISABLED] SendOTPEvent publish — commented out in LoginAsync
+    Note over AS: [DISABLED] BlockIpAddressAsync — commented out in LoginAsync

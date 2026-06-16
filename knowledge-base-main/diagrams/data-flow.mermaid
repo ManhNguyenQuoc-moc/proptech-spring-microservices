@@ -1,0 +1,54 @@
+---
+title: CMN Request Data Flow
+---
+sequenceDiagram
+    actor User
+    participant Client as Frontend<br/>(Web/Mobile)
+    participant GW as Web Gateway<br/>(YARP)
+    participant AdminAPI as Administration API
+    participant CustAPI as Customer API
+    participant DB as SQL Server
+    participant Redis
+    participant Cloudinary
+
+    %% Auth flow
+    Note over User,Redis: Authentication Flow
+    User->>Client: Enter credentials (Employee.Code + password) + X-Tenant header
+    Client->>GW: POST /cmn/administration-service/api/auth
+    GW->>AdminAPI: Forward request
+    AdminAPI->>DB: Find Employee by Code → IdentityUser by UserId
+    AdminAPI->>Redis: SET {userId}:{sessionId} = refreshToken TTL 720h
+    AdminAPI-->>Client: LoginOutputDto { AccessToken, RefreshToken, IsFirstLogin }
+    Client->>Client: cookie.set(ACCESS_TOKEN_KEY, accessToken)
+    Client->>Client: cookie.set(REFRESH_TOKEN_KEY, refreshToken)
+    Client->>Client: localStorage.set(tenantId)
+
+    %% Authenticated request
+    Note over User,DB: Authenticated Request Flow
+    User->>Client: Action (e.g., view employees)
+    Client->>GW: GET /cmn/administration-service/api/employees<br/>Authorization: Bearer {token}<br/>X-Tenant: {tenantId}
+    GW->>AdminAPI: Forward (path: /cmn/administration-service/api/employees)
+    AdminAPI->>AdminAPI: CMNAbpExceptionFilter validates
+    AdminAPI->>DB: IRepository<Employee> query (scoped to TenantId)
+    DB-->>AdminAPI: Employee records
+    AdminAPI-->>Client: ApiResult<PagedResult<EmployeeOutputDto>>
+
+    %% Cross-service gRPC
+    Note over CustAPI,AdminAPI: Cross-Service Permission Check (gRPC)
+    User->>Client: Action on Customer API
+    Client->>GW: GET /cmn/customer-management/api/parties
+    GW->>CustAPI: Forward
+    CustAPI->>AdminAPI: gRPC CheckPermission(userId, key)
+    AdminAPI-->>CustAPI: { allowed: true }
+    CustAPI->>DB: Query Party data
+    CustAPI-->>Client: ApiResult<PagedResult<PartyOutputDto>>
+
+    %% Media upload
+    Note over User,Cloudinary: Media Upload Flow
+    User->>Client: Select file
+    Client->>GW: POST /cmn/administration-service/api/media-files (FormData)
+    GW->>AdminAPI: Forward
+    AdminAPI->>Cloudinary: Upload file
+    Cloudinary-->>AdminAPI: { publicId, secureUrl, assetId, ... }
+    AdminAPI->>DB: Save MediaFile entity
+    AdminAPI-->>Client: ApiResult<MediaFileOutputDto>

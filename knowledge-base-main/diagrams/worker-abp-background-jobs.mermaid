@@ -1,0 +1,38 @@
+---
+title: CMN — ABP Background Jobs Processing
+---
+flowchart TD
+    subgraph Registration["Module Registration"]
+        REG["Volo.Abp.BackgroundJobs.EntityFrameworkCore\nregistered in host modules\n(Administration API + Customer API)"]
+        STORE["Job store: SQL Server\nABP internal table: AbpBackgroundJobs\n(schema: ADM / CM)"]
+    end
+
+    subgraph Producer["Job Producer (any app service)"]
+        ENQUEUE["IBackgroundJobManager.EnqueueAsync\n(jobArgs, priority, delay)"]
+    end
+
+    subgraph Worker["ABP Background Worker (in-process)"]
+        POLL["BackgroundJobWorker\npolls AbpBackgroundJobs table"]
+        FETCH["Fetch due jobs\n(NextTryTime <= now)"]
+        DESER["Deserialize JobArgs\nto concrete type"]
+        EXEC["IBackgroundJob<TArgs>.ExecuteAsync(args)"]
+        RETRY["On failure: increment TryCount\nUpdate NextTryTime (exponential backoff)\nMax retries: configurable"]
+        DEL["On success: delete job record"]
+    end
+
+    subgraph Note["Implementation Note"]
+        N1["No custom IBackgroundJob handlers found\nin CMN codebase (Phase 3 scan).\nABP uses background jobs internally\n(e.g., ABP audit log flushing).\nEmail sending is synchronous via\nIEmailSender in event handlers —\nNOT enqueued as background jobs."]
+    end
+
+    REG --> STORE
+    ENQUEUE -->|"INSERT AbpBackgroundJobs"| STORE
+    STORE --> POLL
+    POLL --> FETCH --> DESER --> EXEC
+    EXEC -->|"Success"| DEL
+    EXEC -->|"Exception"| RETRY
+    RETRY -->|"TryCount < MaxRetries"| STORE
+    RETRY -->|"MaxRetries exceeded"| DEL
+
+    N1:::noteStyle
+
+    classDef noteStyle fill:#fffde7,stroke:#f9a825,color:#333

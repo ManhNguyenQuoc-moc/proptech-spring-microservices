@@ -1,0 +1,74 @@
+# ============================================================
+# CMN FLOW TEMPLATE
+# Describes a multi-step operational flow for the manifest.
+#
+# A "flow" is a named, traceable sequence of steps across
+# services, events, or background jobs.
+#
+# Instructions:
+#   1. Copy this block into manifest.yml (or a standalone flows section)
+#   2. Replace all <<PLACEHOLDERS>>
+#   3. Create the corresponding Mermaid diagram
+# ============================================================
+
+# <!-- BEGIN: flow-entry -->
+id: <<flow-id>>                             # kebab-case. e.g. "employee-import-flow"
+name: "<<Flow Display Name>>"               # e.g. "Employee Bulk Import (2-step)"
+type: <<sequence|event-chain|background-job|import-pipeline|grpc-call>>
+
+# What triggers this flow
+trigger:
+  type: <<http-request|event|schedule|manual>>
+  detail: "<<e.g. POST /cmn/administration-service/api/employee/validate-import>>"
+  actor: "<<e.g. Admin User via Administration Web App>>"
+
+# All services involved (ordered by participation)
+services_involved:
+  - <<service-id>>
+
+# Step-by-step flow definition
+steps:
+  - step: 1
+    actor: <<service-id|user|external-system>>    # Who performs this step
+    action: "<<What happens — imperative statement>>"
+    output: "<<What is produced — data, state change, event>>"
+    infra: <<integration-id>>                     # Optional: which integration is used
+    notes: "<<Optional: constraints, edge cases>>"
+
+  - step: 2
+    actor: <<service-id|user|external-system>>
+    action: "<<...>>"
+    output: "<<...>>"
+
+  # Add more steps as needed...
+
+# Error / alternative paths
+error_paths:
+  - condition: "<<When this error occurs>>"
+    step: <<step-number>>
+    behavior: "<<How the system responds — HTTP status, exception, fallback>>"
+    recovery: "<<Optional: how to recover>>"
+
+# Mermaid diagram showing this flow visually
+diagram: "swt-cmn-knowledge-base/diagrams/<<diagram-name>>.mermaid"
+
+# Linked requirements and business rules
+requirements:
+  - <<REQ-DOMAIN-NNN>>
+business_rules:
+  - <<BR-DOMAIN-NNN>>
+
+# Known disabled steps (use for flows with commented-out behavior)
+disabled_steps:
+  - step: <<step-number>>
+    reason: "<<TD-NNN: what is disabled and why>>"
+# <!-- END: flow-entry -->
+
+# ============================================================
+# FLOW TYPES — choose the most appropriate:
+#   sequence        — synchronous request/response chain
+#   event-chain     — event published → handler → side effects
+#   background-job  — ABP Background Job execution
+#   import-pipeline — multi-step data import (validate → execute)
+#   grpc-call       — cross-service gRPC request/response
+# ============================================================
